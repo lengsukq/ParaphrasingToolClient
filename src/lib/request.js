@@ -1,159 +1,185 @@
 /**
- * 封装的HTTP请求工具
+ * @file 基于 fetch 的通用请求函数封装
+ *       支持：
+ *         - 常见请求类型 (GET, POST, PUT, DELETE, 等)
+ *         - 文件上传
+ *         - 统一错误处理
+ *         - 可配置的超时
  */
 
-// 默认配置
-const DEFAULT_CONFIG = {
-  baseURL: '',
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json'
-  }
-};
-
-// 请求拦截器
-const requestInterceptors = [];
-
-// 响应拦截器
-const responseInterceptors = [];
-
-// 错误重试配置
-const RETRY_CONFIG = {
-  maxRetries: 2,
-  retryDelay: 1000
+/**
+ * 默认配置项
+ */
+const defaultOptions = {
+  baseURL: import.meta.env.VITE_API_BASE_URL || '', // 从环境变量获取 baseURL，如果环境变量不存在，则默认为空字符串
+  timeout: 10000, // 超时时间，单位：毫秒
+  headers: {}, // 移除默认的 Content-Type
 };
 
 /**
- * 超时控制函数
+ * 检查响应状态
+ * @param {Response} response fetch 的 Response 对象
+ * @returns {Response} 如果状态码在 200-299 范围内，返回 Response 对象；否则抛出错误
  */
-const timeoutPromise = (timeout) => {
-  return new Promise((_, reject) => {
-    setTimeout(() => {
-      reject(new Error('Request timeout'));
-    }, timeout);
-  });
-};
-
-/**
- * 请求重试函数
- */
-const retryRequest = async (fetchPromise, retryCount = 0) => {
-  try {
-    return await fetchPromise();
-  } catch (error) {
-    if (retryCount < RETRY_CONFIG.maxRetries) {
-      await new Promise(resolve => setTimeout(resolve, RETRY_CONFIG.retryDelay));
-      return retryRequest(fetchPromise, retryCount + 1);
+async function checkStatus(response) {
+  if (response.status >= 200 && response.status < 300) {
+    return response;
+  } else {
+    const error = new Error(response.statusText || `HTTP Error: ${response.status}`);
+    error.response = response;
+    try {
+      // 尝试解析 JSON 格式的错误信息
+      error.data = await response.json();
+      // 如果错误信息有 message 字段，则使用该字段作为错误信息
+      if (error.data && error.data.message) {
+        error.message = error.data.message;
+      }
+    } catch (e) {
+      // 如果不是 JSON 格式，尝试获取文本格式的错误信息
+      error.data = await response.text();
     }
     throw error;
   }
-};
+}
 
 /**
- * HTTP请求类
+ * 发起请求的通用函数
+ * @param {string} url 请求的URL
+ * @param {object} options fetch 的配置项
+ * @returns {Promise<any>} 返回 Promise，resolve 的值为 JSON 格式的响应数据
  */
-class HttpClient {
-  constructor(config = {}) {
-    this.config = { ...DEFAULT_CONFIG, ...config };
-  }
+async function request(url, options = {}) {
+  const finalOptions = {
+    ...defaultOptions,
+    ...options,
+    headers: {
+      ...defaultOptions.headers,
+      ...options.headers,
+    },
+  };
 
-  /**
-   * 添加请求拦截器
-   */
-  addRequestInterceptor(interceptor) {
-    requestInterceptors.push(interceptor);
-  }
+  const { baseURL, timeout, ...fetchOptions } = finalOptions;
 
-  /**
-   * 添加响应拦截器
-   */
-  addResponseInterceptor(interceptor) {
-    responseInterceptors.push(interceptor);
-  }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-  /**
-   * 处理请求配置
-   */
-  async processRequestConfig(config) {
-    let processedConfig = { ...config };
-    for (const interceptor of requestInterceptors) {
-      processedConfig = await interceptor(processedConfig);
-    }
-    return processedConfig;
-  }
-
-  /**
-   * 处理响应数据
-   */
-  async processResponse(response) {
-    let processedResponse = response;
-    for (const interceptor of responseInterceptors) {
-      processedResponse = await interceptor(processedResponse);
-    }
-    return processedResponse;
-  }
-
-  /**
-   * 发送请求
-   */
-  async request(url, config = {}) {
-    const finalConfig = await this.processRequestConfig({
-      ...this.config,
-      ...config,
-      url: this.config.baseURL + url
+  try {
+    const response = await fetch(baseURL + url, {
+      ...fetchOptions,
+      signal: controller.signal,
     });
 
-    const fetchPromise = () => {
-      return Promise.race([
-        fetch(finalConfig.url, finalConfig),
-        timeoutPromise(finalConfig.timeout)
-      ]);
-    };
+    clearTimeout(timeoutId);
+    await checkStatus(response); // 检查状态码
 
-    try {
-      const response = await retryRequest(fetchPromise);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      return this.processResponse(data);
-    } catch (error) {
-      console.error('Request failed:', error);
-      throw error;
+    // 处理 No Content 响应
+    if (response.status === 204) {
+      return null;
     }
-  }
 
-  // GET请求
-  get(url, config = {}) {
-    return this.request(url, { ...config, method: 'GET' });
-  }
-
-  // POST请求
-  post(url, data, config = {}) {
-    return this.request(url, {
-      ...config,
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
-  }
-
-  // PUT请求
-  put(url, data, config = {}) {
-    return this.request(url, {
-      ...config,
-      method: 'PUT',
-      body: JSON.stringify(data)
-    });
-  }
-
-  // DELETE请求
-  delete(url, config = {}) {
-    return this.request(url, { ...config, method: 'DELETE' });
+    // 尝试解析为 JSON
+    return response.json();
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      error.message = 'Request timed out';
+    }
+    // 重新抛出错误，让调用者处理
+    throw error;
   }
 }
 
-// 创建默认实例
-const http = new HttpClient();
+/**
+ * GET 请求
+ * @param {string} url 请求的URL
+ * @param {object} params  URL 参数
+ * @param {object} options fetch 的配置项
+ * @returns {Promise<any>}
+ */
+export async function get(url, params = {}, options = {}) {
+  const query = new URLSearchParams(params).toString();
+  const requestUrl = query ? `${url}?${query}` : url;
+  return request(requestUrl, {
+    method: 'GET',
+    ...options,
+  });
+}
 
-export default http;
-export { HttpClient };
+/**
+ * POST 请求
+ * @param {string} url 请求的URL
+ * @param {object} data 请求体
+ * @param {object} options fetch 的配置项
+ * @returns {Promise<any>}
+ */
+export async function post(url, data = {}, options = {}) {
+  const finalOptions = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json', // 默认 Content-Type
+      ...options.headers, // 合并用户自定义的 header，确保自定义的 header 优先级更高
+    },
+    ...options,
+  };
+
+  // 根据 Content-Type 设置 body
+  if (data instanceof FormData) {
+    finalOptions.body = data;
+  } else if (
+      !finalOptions.headers ||
+      !finalOptions.headers['Content-Type'] ||
+      finalOptions.headers['Content-Type'].includes('application/json')
+  ) {
+    finalOptions.body = JSON.stringify(data); // 默认 JSON 格式
+  } else {
+    // 其他 Content-Type，例如 'application/x-www-form-urlencoded' 或 'multipart/form-data'
+    finalOptions.body = data; // 直接使用 data
+  }
+
+  return request(url, finalOptions);
+}
+
+/**
+ * PUT 请求
+ * @param {string} url 请求的URL
+ * @param {object} data 请求体
+ * @param {object} options fetch 的配置项
+ * @returns {Promise<any>}
+ */
+export async function put(url, data = {}, options = {}) {
+  return request(url, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+    ...options,
+  });
+}
+
+/**
+ * DELETE 请求
+ * @param {string} url 请求的URL
+ * @param {object} options fetch 的配置项
+ * @returns {Promise<any>}
+ */
+export async function del(url, options = {}) {
+  return request(url, {
+    method: 'DELETE',
+    ...options,
+  });
+}
+
+/**
+ * 文件上传
+ * @param {string} url 请求的URL
+ * @param {FormData} formData FormData 对象
+ * @param {object} options fetch 的配置项
+ * @returns {Promise<any>}
+ */
+export async function upload(url, formData, options = {}) {
+  return request(url, {
+    method: 'POST',
+    body: formData,
+    ...options,
+  });
+}
+
+export default request;
