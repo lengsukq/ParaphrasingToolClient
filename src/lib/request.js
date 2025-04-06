@@ -12,7 +12,7 @@
  */
 const defaultOptions = {
   baseURL: import.meta.env.VITE_API_BASE_URL || '', // 从环境变量获取 baseURL，如果环境变量不存在，则默认为空字符串
-  timeout: 10000, // 超时时间，单位：毫秒
+  timeout: 180000, // 超时时间，单位：毫秒
   headers: {}, // 移除默认的 Content-Type
 };
 
