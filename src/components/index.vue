@@ -86,7 +86,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { toast } from 'vue-sonner'
 import CustomUpload from '@/components/CustomUpload.vue';
-import { post } from '@/lib/request.js';
+import { post } from '@/lib/request';
 import {
   TableBody,
   TableCell,
