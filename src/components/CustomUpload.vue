@@ -91,7 +91,7 @@
 
 <script lang="ts" setup>
 import { ref } from 'vue';
-import { ElMessage } from 'element-plus';
+// import { ElMessage } from 'element-plus';
 import { upload} from '@/lib/request'; // 导入 post 函数
 
 const emit = defineEmits(['upload-success', 'upload-error']);
@@ -146,7 +146,7 @@ const uploadFile = async (file: File) => {
   } catch (err: any) {
     error.value = err.message || '文件上传失败';
     emit('upload-error', error.value);
-    ElMessage.error(error.value);
+    // ElMessage.error(error.value);
   } finally {
     isUploading.value = false; // 上传完成，重置状态
     uploadProgress.value = 0;

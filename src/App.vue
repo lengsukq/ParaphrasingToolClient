@@ -1,8 +1,10 @@
-<script setup>
-import Index from "@/components/index.vue";
+<script setup lang="ts">
+import Index from './components/index.vue'
+import { Toaster } from '@/components/ui/sonner'
 </script>
 
 <template>
+  <Toaster />
   <Index/>
 </template>
 
