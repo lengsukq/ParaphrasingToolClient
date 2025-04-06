@@ -1,9 +1,9 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
+import Index from "@/components/index.vue";
 </script>
 
 <template>
-  <HelloWorld msg="Vite + Vue" />
+  <Index/>
 </template>
 
 <style scoped>
