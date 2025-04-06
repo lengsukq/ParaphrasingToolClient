@@ -1,12 +1,18 @@
+// 父组件
 <template>
   <!--  整体容器 -->
   <div class="">
     <div class="">
       <!-- 顶部操作栏 -->
-      <!--      <div class="flex justify-end mb-6">-->
-      <!--        <Button variant="default" @click="openConfig">系统配置</Button>-->
-      <!--        <ConfigModel ref="configModelRef" />-->
-      <!--      </div>-->
+      <div class="flex justify-end mb-6">
+        <Button variant="default" @click="openConfigDialog">系统配置</Button>
+        <ConfigDialog
+            :open="isConfigDialogOpen"
+            @close="closeConfigDialog"
+            @config-change="handleConfigChange"
+            :config="config"
+        />
+      </div>
 
       <!--  上传区域 -->
       <div class="mb-6">
@@ -18,69 +24,68 @@
 
       <!--  表格区域 -->
       <div v-if="analyzeResults.length > 0" class="">
-          <TableHeader>
-            <TableRow>
-              <TableHead style="width: 30%;">原文</TableHead>
-              <TableHead style="width: 20%;">相似源</TableHead>
-              <TableHead style="width: 20%;">修改建议</TableHead>
-              <TableHead style="width: 30%;">AI降重</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-for="row in analyzeResults" :key="row.original_text">
-              <TableCell>
+        <TableHeader>
+          <TableRow>
+            <TableHead style="width: 30%;">原文</TableHead>
+            <TableHead style="width: 20%;">相似源</TableHead>
+            <TableHead style="width: 20%;">修改建议</TableHead>
+            <TableHead style="width: 30%;">AI降重</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow v-for="row in analyzeResults" :key="row.original_text">
+            <TableCell>
                 <Textarea
                     style="width: 100%; word-break: break-word; max-height: 7em; overflow: auto;"
                     :title="row.original_text"
                     v-model="row.original_text"
                     readonly
                 />
-              </TableCell>
-              <TableCell>
+            </TableCell>
+            <TableCell>
                 <Textarea
                     style="width: 100%; word-break: break-word; max-height: 7em; overflow: auto;"
                     :title="row.similar_source"
                     v-model="row.similar_source"
                     readonly
                 />
-              </TableCell>
-              <TableCell>
+            </TableCell>
+            <TableCell>
                 <Textarea
                     style="width: 100%; word-break: break-word; max-height: 7em; overflow: auto;"
                     :title="row.correction_advice"
                     v-model="row.correction_advice"
                     readonly
                 />
-              </TableCell>
-              <TableCell>
-                <Button
-                    variant="secondary"
-                    size="sm"
-                    @click="handleAIParaphrase(row)"
-                    :loading="row.isLoading"
-                >
-                  AI降重
-                </Button>
-                <div v-if="row.aiResult && row.aiResult.paraphrased_text" class="mt-2 text-sm text-green-600">
+            </TableCell>
+            <TableCell>
+              <Button
+                  variant="secondary"
+                  size="sm"
+                  @click="handleAIParaphrase(row)"
+                  :loading="row.isLoading"
+              >
+                AI降重
+              </Button>
+              <div v-if="row.aiResult && row.aiResult.paraphrased_text" class="mt-2 text-sm text-green-600">
                   <Textarea
                       style="width: 100%; word-break: break-word; max-height: 7em; overflow: auto;"
                       v-model="row.aiResult.paraphrased_text"
                       readonly
                   />
-                </div>
-              </TableCell>
-            </TableRow>
-          </TableBody>
+              </div>
+            </TableCell>
+          </TableRow>
+        </TableBody>
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { toast } from 'vue-sonner'
 import CustomUpload from '@/components/CustomUpload.vue';
-// import ConfigModel from './ConfigModel.vue';
 import { post } from '@/lib/request.js';
 import {
   TableBody,
@@ -91,7 +96,7 @@ import {
 } from "@/components/ui/table"  // 假设这些组件仍然可用
 import { Button } from "@/components/ui/button"
 import { Textarea } from '@/components/ui/textarea'; // 导入 Textarea 组件
-
+import ConfigDialog from './ConfigDialog.vue'; // 导入ConfigDialog组件
 
 interface AnalyzeResult {
   original_text: string;
@@ -101,12 +106,39 @@ interface AnalyzeResult {
   aiResult?: any; // 考虑到aiResult可能包含paraphrased_text，这里修改了类型
 }
 
-// const configModelRef = ref<InstanceType<typeof ConfigModel> | null>(null);
-const analyzeResults = ref<AnalyzeResult[]>([]);
+interface Config {
+  api_key?: string;
+  base_url?: string;
+  model?: string;
+  prompt?: string;
+}
 
-// const openConfig = () => {
-//   configModelRef.value?.showModel();
-// };
+const analyzeResults = ref<AnalyzeResult[]>([]);
+const isConfigDialogOpen = ref(false);
+const config = reactive<Config>({});
+
+// 在页面加载时读取配置信息
+onMounted(() => {
+  const savedConfig = localStorage.getItem('ai_config');
+  if (savedConfig) {
+    Object.assign(config, JSON.parse(savedConfig));
+  }
+});
+
+
+const openConfigDialog = () => {
+  isConfigDialogOpen.value = true;
+};
+
+const closeConfigDialog = () => {
+  isConfigDialogOpen.value = false;
+};
+
+const handleConfigChange = (newConfig: Config) => {
+  Object.assign(config, newConfig);
+  // 保存配置信息到 localStorage
+  localStorage.setItem('ai_config', JSON.stringify(newConfig));
+};
 
 const handleUploadSuccess = (response: any) => {
   if (response.code === 200) {
@@ -134,12 +166,9 @@ const handleAIParaphrase = async (row: AnalyzeResult) => {
   analyzeResults.value[index].isLoading = true;
 
   try {
-    // const config = configModelRef.value?.getConfig();
-
     const response = await post('/ai_paraphrase', { // 使用 post 函数
       text: row.original_text,
-      // prompt: config?.prompt,
-      // model: config?.model,
+      ...config, // 将配置合并到请求中
     });
     if (response.code === 200) {
       analyzeResults.value[index].aiResult = response.data;
