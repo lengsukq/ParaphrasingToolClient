@@ -1,6 +1,6 @@
 <template>
   <!--  整体容器 -->
-  <div class="">
+  <div class="w-full">
     <div class="">
       <!-- 顶部操作栏 -->
       <div class="flex justify-end mb-6">
