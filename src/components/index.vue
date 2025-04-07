@@ -4,7 +4,7 @@
     <div class="">
       <!-- 顶部操作栏 -->
       <div class="flex justify-end mb-6">
-        <Button variant="default" @click="openConfigDialog">系统配置</Button>
+        <Button variant="outline" @click="openConfigDialog">系统配置</Button>
         <ConfigDialog
             :open="isConfigDialogOpen"
             @close="closeConfigDialog"
@@ -59,8 +59,7 @@
             </TableCell>
             <TableCell>
               <Button
-                  variant="secondary"
-                  size="sm"
+                  variant="outline"
                   @click="handleAIParaphrase(row)"
                   :loading="row.isLoading"
               >
@@ -68,7 +67,7 @@
               </Button>
               <div v-if="row.aiResult && row.aiResult.paraphrased_text" class="mt-2 text-sm text-green-600">
                   <!-- 按钮点击后，显示AIParaphraseDialog -->
-                  <Button variant="default" size="sm" @click="openParaphraseDialog(row)">查看降重结果</Button>
+                  <Button variant="outline" @click="openParaphraseDialog(row)">查看降重结果</Button>
               </div>
             </TableCell>
           </TableRow>

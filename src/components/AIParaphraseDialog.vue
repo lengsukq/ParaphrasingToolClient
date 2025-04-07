@@ -31,7 +31,7 @@
 
       <DialogFooter>
         <Button variant="outline" @click="onCopy">复制</Button>
-        <Button @click="onClose">关闭</Button>
+        <Button variant="outline" @click="onClose">关闭</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

@@ -36,9 +36,7 @@
         <div class="space-y-2">
           <h3 class="text-lg font-medium text-gray-900">
             拖拽文件到此处或
-            <button
-              type="button"
-              class="text-blue-600 hover:text-blue-700 focus:outline-none focus:underline"
+            <Button variant="outline"
               @click="triggerFileInput"
             >
               点击上传
@@ -92,7 +90,8 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
 // import { ElMessage } from 'element-plus';
-import { upload} from '@/lib/request'; // 导入 post 函数
+import { upload} from '@/lib/request';
+import {Button} from "@/components/ui/button"; // 导入 post 函数
 
 const emit = defineEmits(['upload-success', 'upload-error']);
 

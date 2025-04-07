@@ -26,8 +26,8 @@
         </div>
       </div>
       <DialogFooter>
-        <Button type="button" @click="close">取消</Button>
-        <Button type="submit" @click="handleSave">保存</Button>
+        <Button variant="outline" @click="close">取消</Button>
+        <Button variant="outline" @click="handleSave">保存</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
