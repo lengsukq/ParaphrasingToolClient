@@ -67,7 +67,14 @@
               </Button>
               <div v-if="row.aiResult && row.aiResult.paraphrased_text" class="mt-2 text-sm text-green-600">
                   <!-- 按钮点击后，显示AIParaphraseDialog -->
-                  <Button variant="outline" @click="openParaphraseDialog(row)">查看降重结果</Button>
+                <HoverCard>
+                  <HoverCardTrigger>
+                    <Button variant="outline" @click="openParaphraseDialog(row)">查看降重结果</Button>
+                  </HoverCardTrigger>
+                  <HoverCardContent>
+                    {{ row.aiResult.paraphrased_text }}
+                  </HoverCardContent>
+                </HoverCard>
               </div>
             </TableCell>
           </TableRow>
@@ -101,6 +108,11 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from '@/components/ui/textarea'; // 导入 Textarea 组件
 import ConfigDialog from './ConfigDialog.vue'; // 导入ConfigDialog组件
 import AIParaphraseDialog from './AIParaphraseDialog.vue'; // 导入新组件
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card'
 
 interface AnalyzeResult {
   original_text: string;
