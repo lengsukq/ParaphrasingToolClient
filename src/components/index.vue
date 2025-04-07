@@ -1,4 +1,3 @@
-// 父组件
 <template>
   <!--  整体容器 -->
   <div class="">
@@ -26,10 +25,10 @@
       <div v-if="analyzeResults.length > 0" class="">
         <TableHeader>
           <TableRow>
-            <TableHead style="width: 30%;">原文</TableHead>
+            <TableHead style="width: 50%;">原文</TableHead>
             <TableHead style="width: 20%;">相似源</TableHead>
             <TableHead style="width: 20%;">修改建议</TableHead>
-            <TableHead style="width: 30%;">AI降重</TableHead>
+            <TableHead style="width: 10%;">AI降重</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -68,16 +67,21 @@
                 AI降重
               </Button>
               <div v-if="row.aiResult && row.aiResult.paraphrased_text" class="mt-2 text-sm text-green-600">
-                  <Textarea
-                      style="width: 100%; word-break: break-word; max-height: 7em; overflow: auto;"
-                      v-model="row.aiResult.paraphrased_text"
-                      readonly
-                  />
+                  <!-- 按钮点击后，显示AIParaphraseDialog -->
+                  <Button variant="default" size="sm" @click="openParaphraseDialog(row)">查看降重结果</Button>
               </div>
             </TableCell>
           </TableRow>
         </TableBody>
       </div>
+
+      <!-- AI降重结果对话框 -->
+      <AIParaphraseDialog
+        :open="isParaphraseDialogOpen"
+        :originalText="dialogOriginalText"
+        :paraphrasedText="dialogParaphrasedText"
+        @close="closeParaphraseDialog"
+      />
     </div>
   </div>
 </template>
@@ -97,13 +101,14 @@ import {
 import { Button } from "@/components/ui/button"
 import { Textarea } from '@/components/ui/textarea'; // 导入 Textarea 组件
 import ConfigDialog from './ConfigDialog.vue'; // 导入ConfigDialog组件
+import AIParaphraseDialog from './AIParaphraseDialog.vue'; // 导入新组件
 
 interface AnalyzeResult {
   original_text: string;
   similar_source: string;
   correction_advice: string;
   isLoading?: boolean;
-  aiResult?: any; // 考虑到aiResult可能包含paraphrased_text，这里修改了类型
+  aiResult?: { paraphrased_text: string }; //  修改aiResult的类型
 }
 
 interface Config {
@@ -116,6 +121,11 @@ interface Config {
 const analyzeResults = ref<AnalyzeResult[]>([]);
 const isConfigDialogOpen = ref(false);
 const config = reactive<Config>({});
+
+// AI降重对话框相关状态
+const isParaphraseDialogOpen = ref(false);
+const dialogOriginalText = ref('');
+const dialogParaphrasedText = ref('');
 
 // 在页面加载时读取配置信息
 onMounted(() => {
@@ -145,18 +155,14 @@ const handleUploadSuccess = (response: any) => {
     analyzeResults.value = response.data.map((item: AnalyzeResult) => ({
       ...item,
       isLoading: false,
-      aiResult: ''
+      aiResult: { paraphrased_text: '' } // 初始化 aiResult.paraphrased_text
     }));
-    toast("成功",{
-      description: "文件上传成功",
-    })
+    toast.success('文件上传成功')
   }
 };
 
 const handleUploadError = (error: string) => {
-  toast("错误",{
-    description: error,
-  })
+  toast.error(error)
 };
 
 const handleAIParaphrase = async (row: AnalyzeResult) => {
@@ -171,19 +177,27 @@ const handleAIParaphrase = async (row: AnalyzeResult) => {
       ...config, // 将配置合并到请求中
     });
     if (response.code === 200) {
-      analyzeResults.value[index].aiResult = response.data;
-      toast("成功",{
-        description: "AI降重成功",
-      })
+      analyzeResults.value[index].aiResult = { paraphrased_text: response.data.paraphrased_text }; // 确保正确赋值
+      toast.success('AI降重成功')
     } else {
       throw new Error(response.message || 'AI处理失败');
     }
   } catch (error: any) {
-    toast("错误",{
-      description: error.message || 'AI处理失败',
-    })
+    toast.error("error.message || 'AI处理失败'")
   } finally {
     analyzeResults.value[index].isLoading = false;
   }
+};
+
+// 打开AI降重结果对话框
+const openParaphraseDialog = (row: AnalyzeResult) => {
+    dialogOriginalText.value = row.original_text;
+    dialogParaphrasedText.value = row.aiResult?.paraphrased_text || ''; // 确保在没有降重结果时，paraphrasedText为空字符串
+    isParaphraseDialogOpen.value = true;
+};
+
+// 关闭AI降重结果对话框
+const closeParaphraseDialog = () => {
+    isParaphraseDialogOpen.value = false;
 };
 </script>
