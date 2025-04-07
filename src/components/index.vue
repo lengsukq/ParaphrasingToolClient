@@ -25,8 +25,8 @@
       <div v-if="analyzeResults.length > 0" class="">
         <TableHeader>
           <TableRow>
-            <TableHead style="width: 50%;">原文</TableHead>
-            <TableHead style="width: 20%;">相似源</TableHead>
+            <TableHead style="width: 35%;">原文</TableHead>
+            <TableHead style="width: 35%;">相似源</TableHead>
             <TableHead style="width: 20%;">修改建议</TableHead>
             <TableHead style="width: 10%;">AI降重</TableHead>
           </TableRow>
@@ -35,7 +35,7 @@
           <TableRow v-for="row in analyzeResults" :key="row.original_text">
             <TableCell>
                 <Textarea
-                    style="width: 100%; word-break: break-word; max-height: 7em; overflow: auto;"
+                    style="width: 100%; word-break: break-word; max-height: 10em; overflow: auto;"
                     :title="row.original_text"
                     v-model="row.original_text"
                     readonly
@@ -43,7 +43,7 @@
             </TableCell>
             <TableCell>
                 <Textarea
-                    style="width: 100%; word-break: break-word; max-height: 7em; overflow: auto;"
+                    style="width: 100%; word-break: break-word; max-height: 10em; overflow: auto;"
                     :title="row.similar_source"
                     v-model="row.similar_source"
                     readonly
@@ -51,7 +51,7 @@
             </TableCell>
             <TableCell>
                 <Textarea
-                    style="width: 100%; word-break: break-word; max-height: 7em; overflow: auto;"
+                    style="width: 100%; word-break: break-word; max-height: 10em; overflow: auto;"
                     :title="row.correction_advice"
                     v-model="row.correction_advice"
                     readonly
