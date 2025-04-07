@@ -15,7 +15,7 @@
               id="originalText"
               v-model="props.originalText"
               readonly
-              style="width: 100%; word-break: break-word; max-height: 7em; overflow: auto;"
+              style="width: 100%; word-break: break-word; max-height: 12em; overflow: auto;"
           />
         </div>
 
@@ -24,7 +24,7 @@
           <Textarea
               id="paraphrasedText"
               v-model="props.paraphrasedText"
-              style="width: 100%; word-break: break-word; max-height: 7em; overflow: auto;"
+              style="width: 100%; word-break: break-word; max-height: 15em; overflow: auto;"
           />
         </div>
       </div>
