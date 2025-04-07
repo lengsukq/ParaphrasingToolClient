@@ -1,5 +1,5 @@
 <template>
-  <Dialog :open="open" @close="onClose">
+  <Dialog :open="open" @update:open="onClose">
     <DialogContent>
       <DialogHeader>
         <DialogTitle>AI 降重结果</DialogTitle>
