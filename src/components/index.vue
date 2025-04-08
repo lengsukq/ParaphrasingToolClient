@@ -96,7 +96,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { toast } from 'vue-sonner'
 import CustomUpload from '@/components/CustomUpload.vue';
-import { post } from '@/lib/request';
+import { post,openAIAct } from '@/lib/request';
 import {
   TableBody,
   TableCell,
@@ -127,6 +127,7 @@ interface Config {
   base_url?: string;
   model?: string;
   prompt?: string;
+  localAi?: boolean;
 }
 
 const analyzeResults = ref<AnalyzeResult[]>([]);
@@ -181,20 +182,26 @@ const handleAIParaphrase = async (row: AnalyzeResult) => {
   if (index === -1) return;
 
   analyzeResults.value[index].isLoading = true;
-
+  let response;
   try {
-    const response = await post('/ai_paraphrase', { // 使用 post 函数
-      text: row.original_text,
-      ...config, // 将配置合并到请求中
-    });
+    if (config.localAi){
+       response = await openAIAct(config.api_key,config.base_url,config.model,config.prompt,row.original_text);
+    }else{
+      response = await post('/ai_paraphrase', { // 使用 post 函数
+        text: row.original_text,
+        ...config, // 将配置合并到请求中
+      });
+    }
+
+
     if (response.code === 200) {
-      analyzeResults.value[index].aiResult = { paraphrased_text: response.data.paraphrased_text }; // 确保正确赋值
+      analyzeResults.value[index].aiResult = { paraphrased_text: response.content || response.data.paraphrased_text }; // 确保正确赋值
       toast.success('AI降重成功')
     } else {
       throw new Error(response.message || 'AI处理失败');
     }
   } catch (error: any) {
-    toast.error("error.message || 'AI处理失败'")
+    toast.error(error.message || 'AI处理失败')
   } finally {
     analyzeResults.value[index].isLoading = false;
   }

@@ -182,4 +182,40 @@ export async function upload(url, formData, options = {}) {
   });
 }
 
+// 新增 OpenAI 请求函数
+// Please install OpenAI SDK first: `npm install openai`
+
+import OpenAI from "openai";
+
+
+
+export async function openAIAct(api_key,base_url,model, prompt,content) {
+  // 四个参数必须都有值
+  if (!api_key || !base_url || !model || !prompt) {
+    return {message:'请填写完整openAI配置，或取消本地AI降重',code:500};
+  }
+  const openai = new OpenAI({
+    baseURL: base_url,
+    apiKey: api_key,
+    dangerouslyAllowBrowser: true,
+  });
+  const completion = await openai.chat.completions.create({
+    messages: [{role: "system", content: prompt},{ role: "user", content: content }],
+    model: model,
+  });
+
+  try {
+    console.log('completion->',completion,completion.choices[0].message.content);
+
+    return {
+      code:200,
+      content: completion.choices[0].message.content,
+    };
+  }catch(err) {
+    console.log(err);
+    return {code:500,message:'openAI请求失败，请检查配置'};
+  }
+}
+
+
 export default request;

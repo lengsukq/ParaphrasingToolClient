@@ -24,6 +24,10 @@
           <Label for="prompt" class="text-right">Prompt</Label>
           <Textarea id="prompt" v-model="prompt" class="col-span-3" :placeholder="promptPlaceholder" />
         </div>
+        <div class="grid grid-cols-4 items-center gap-4">
+          <Label for="localAi" class="text-right">本地AI降重</Label>
+          <Checkbox id="localAi" v-model="localAi" class="col-span-3" />
+        </div>
       </div>
       <DialogFooter>
         <Button variant="outline" @click="close">取消</Button>
@@ -47,6 +51,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from 'vue-sonner'; // 导入 toast
 
 interface Config {
@@ -54,6 +59,7 @@ interface Config {
   base_url?: string;
   model?: string;
   prompt?: string;
+  localAi?: boolean; // 新增 localAi 属性
 }
 
 const props = defineProps<{
@@ -71,6 +77,7 @@ const apiKey = ref(props.config?.api_key || '');
 const baseUrl = ref(props.config?.base_url || '');
 const model = ref(props.config?.model || '');
 const prompt = ref(props.config?.prompt || '');
+const localAi = ref(props.config?.localAi || false); // 初始化 localAi
 
 // 默认提示信息
 const apiKeyPlaceholder = '请输入 API Key';
@@ -87,12 +94,14 @@ watch(
         baseUrl.value = newConfig.base_url || '';
         model.value = newConfig.model || '';
         prompt.value = newConfig.prompt || '';
+        localAi.value = newConfig.localAi || false; // 更新 localAi
       } else {
         // 如果父组件没有传递config，则清空输入框
         apiKey.value = '';
         baseUrl.value = '';
         model.value = '';
         prompt.value = '';
+        localAi.value = false; // 重置 localAi
       }
     },
     { deep: true } // 深度监听，确保对象内部属性的变化也能被检测到
@@ -124,6 +133,7 @@ const handleSave = () => {
     base_url: baseUrl.value,
     model: model.value,
     prompt: prompt.value,
+    localAi: localAi.value, // 将 localAi 的值添加到 config-change 的 payload 中
   });
   close();
 };
