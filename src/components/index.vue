@@ -39,13 +39,12 @@
         <TableBody>
           <TableRow v-for="row in analyzeResults" :key="row.original_text">
             <TableCell>
-                <Textarea  v-if="row.original_text.includes('div')"
+                <Textarea
                     style="width: 100%; word-break: break-word; max-height: 10em; overflow: auto;"
                     :title="row.original_text"
                     v-model="row.original_text"
                     readonly
                 />
-              <div v-else v-html="row.original_text"/>
             </TableCell>
             <TableCell>
                 <Textarea
