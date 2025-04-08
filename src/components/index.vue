@@ -3,7 +3,11 @@
   <div class="w-full">
     <div class="">
       <!-- 顶部操作栏 -->
-      <div class="flex justify-end mb-6">
+      <div class="flex justify-end mb-6" >
+<!--        <div class="flex items-center space-x-2">-->
+<!--          <Checkbox id="localAi" v-model="isHTML" class="col-span-3" />-->
+<!--          <Label for="airplane-mode">保留原文</Label>-->
+<!--        </div>-->
         <Button variant="outline" @click="openConfigDialog">系统配置</Button>
         <ConfigDialog
             :open="isConfigDialogOpen"
@@ -16,6 +20,7 @@
       <!--  上传区域 -->
       <div class="mb-6">
         <CustomUpload
+            :isHTML="isHTML"
             @upload-success="handleUploadSuccess"
             @upload-error="handleUploadError"
         />
@@ -34,12 +39,13 @@
         <TableBody>
           <TableRow v-for="row in analyzeResults" :key="row.original_text">
             <TableCell>
-                <Textarea
+                <Textarea  v-if="row.original_text.includes('div')"
                     style="width: 100%; word-break: break-word; max-height: 10em; overflow: auto;"
                     :title="row.original_text"
                     v-model="row.original_text"
                     readonly
                 />
+              <div v-else v-html="row.original_text"/>
             </TableCell>
             <TableCell>
                 <Textarea
@@ -113,7 +119,8 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
-
+// import { Label } from '@/components/ui/label'
+// import {Checkbox} from "@/components/ui/checkbox";
 interface AnalyzeResult {
   original_text: string;
   similar_source: string;
@@ -129,6 +136,7 @@ interface Config {
   prompt?: string;
   localAi?: boolean;
 }
+const isHTML = ref<boolean>(false)
 
 const analyzeResults = ref<AnalyzeResult[]>([]);
 const isConfigDialogOpen = ref(false);

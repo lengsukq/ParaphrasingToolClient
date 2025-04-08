@@ -88,10 +88,15 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onBeforeUnmount } from 'vue';
+import { ref, onBeforeUnmount, defineProps, defineEmits } from 'vue';
 // import { ElMessage } from 'element-plus';
 import { upload} from '@/lib/request';
 import {Button} from "@/components/ui/button"; // 导入 post 函数
+
+// 定义props，接收isHTML参数
+const props = defineProps<{
+  isHTML: boolean;
+}>();
 
 const emit = defineEmits(['upload-success', 'upload-error']);
 
@@ -131,10 +136,12 @@ const uploadFile = async (file: File) => {
 
   const formData = new FormData();
   formData.append('file', file);
+  // 传递 isHTML 参数
+  formData.append('isHTML', props.isHTML.toString()); // 将布尔值转换为字符串
 
-    isUploading.value = true;
-    error.value = '';
-    uploadProgress.value = 0;
+  isUploading.value = true;
+  error.value = '';
+  uploadProgress.value = 0;
 
   timer = window.setInterval(() => {
     if (uploadProgress.value < 95) {
@@ -149,16 +156,16 @@ const uploadFile = async (file: File) => {
     const result = await upload('/analyze', formData);
 
     if (result.code === 200) {
-        uploadProgress.value = 100; // 确保进度条达到100%
+      uploadProgress.value = 100; // 确保进度条达到100%
       emit('upload-success', result);
     } else {
       throw new Error(result.message || '上传失败');
     }
-      if (timer) {
-        clearInterval(timer);
-        timer = null;
-      }
-      isUploading.value = false;
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+    isUploading.value = false;
 
   } catch (err: any) {
     error.value = err.message || '文件上传失败';
@@ -192,3 +199,4 @@ onBeforeUnmount(() => {
   }
 });
 </script>
+
