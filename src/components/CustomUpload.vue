@@ -93,14 +93,10 @@ import { ref, onBeforeUnmount, defineProps, defineEmits } from 'vue';
 import { upload} from '@/lib/request';
 import {Button} from "@/components/ui/button"; // 导入 post 函数
 
-// 定义props，接收isHTML参数
-const props = defineProps<{
-  isHTML: boolean;
-}>();
-
 const emit = defineEmits(['upload-success', 'upload-error']);
 const props = defineProps<{
   isLocalParse?: boolean;
+  isHTML: boolean;
 }>();
 
 const isDragging = ref(false);
