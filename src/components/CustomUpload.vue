@@ -94,6 +94,9 @@ import { upload} from '@/lib/request';
 import {Button} from "@/components/ui/button"; // 导入 post 函数
 
 const emit = defineEmits(['upload-success', 'upload-error']);
+const props = defineProps<{
+  isLocalParse?: boolean;
+}>();
 
 const isDragging = ref(false);
 const isUploading = ref(false); // 添加上传状态
@@ -129,12 +132,17 @@ const uploadFile = async (file: File) => {
 
   if (!validateFile(file)) return;
 
+  if (props.isLocalParse) {
+    emit('upload-success', file); // 传递文件给父组件
+    return;
+  }
+
   const formData = new FormData();
   formData.append('file', file);
 
-    isUploading.value = true;
-    error.value = '';
-    uploadProgress.value = 0;
+  isUploading.value = true;
+  error.value = '';
+  uploadProgress.value = 0;
 
   timer = window.setInterval(() => {
     if (uploadProgress.value < 95) {
@@ -145,20 +153,19 @@ const uploadFile = async (file: File) => {
   }, 300);
 
   try {
-
     const result = await upload('/analyze', formData);
 
     if (result.code === 200) {
-        uploadProgress.value = 100; // 确保进度条达到100%
+      uploadProgress.value = 100; // 确保进度条达到100%
       emit('upload-success', result);
     } else {
       throw new Error(result.message || '上传失败');
     }
-      if (timer) {
-        clearInterval(timer);
-        timer = null;
-      }
-      isUploading.value = false;
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+    isUploading.value = false;
 
   } catch (err: any) {
     error.value = err.message || '文件上传失败';
@@ -169,6 +176,7 @@ const uploadFile = async (file: File) => {
     isDragging.value = false;
   }
 };
+
 
 const handleDrop = (e: DragEvent) => {
   isDragging.value = false;
