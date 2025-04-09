@@ -3,7 +3,11 @@
   <div class="w-full">
     <div class="">
       <!-- 顶部操作栏 -->
-      <div class="flex justify-end mb-6">
+      <div class="flex justify-end mb-6" >
+<!--        <div class="flex items-center space-x-2">-->
+<!--          <Checkbox id="localAi" v-model="isHTML" class="col-span-3" />-->
+<!--          <Label for="airplane-mode">保留原文</Label>-->
+<!--        </div>-->
         <Button variant="outline" @click="openConfigDialog">系统配置</Button>
         <ConfigDialog
             :open="isConfigDialogOpen"
@@ -16,6 +20,7 @@
       <!--  上传区域 -->
       <div class="mb-6">
         <CustomUpload
+            :isHTML="isHTML"
             @upload-success="handleUploadSuccess"
             @upload-error="handleUploadError"
         />
@@ -113,7 +118,8 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
-
+// import { Label } from '@/components/ui/label'
+// import {Checkbox} from "@/components/ui/checkbox";
 interface AnalyzeResult {
   original_text: string;
   similar_source: string;
@@ -129,6 +135,7 @@ interface Config {
   prompt?: string;
   localAi?: boolean;
 }
+const isHTML = ref<boolean>(false)
 
 const analyzeResults = ref<AnalyzeResult[]>([]);
 const isConfigDialogOpen = ref(false);

@@ -88,10 +88,15 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onBeforeUnmount } from 'vue';
+import { ref, onBeforeUnmount, defineProps, defineEmits } from 'vue';
 // import { ElMessage } from 'element-plus';
 import { upload} from '@/lib/request';
 import {Button} from "@/components/ui/button"; // 导入 post 函数
+
+// 定义props，接收isHTML参数
+const props = defineProps<{
+  isHTML: boolean;
+}>();
 
 const emit = defineEmits(['upload-success', 'upload-error']);
 const props = defineProps<{
@@ -139,6 +144,8 @@ const uploadFile = async (file: File) => {
 
   const formData = new FormData();
   formData.append('file', file);
+  // 传递 isHTML 参数
+  formData.append('isHTML', props.isHTML.toString()); // 将布尔值转换为字符串
 
   isUploading.value = true;
   error.value = '';
@@ -200,3 +207,4 @@ onBeforeUnmount(() => {
   }
 });
 </script>
+
