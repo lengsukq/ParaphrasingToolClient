@@ -94,10 +94,17 @@ import { upload} from '@/lib/request';
 import {Button} from "@/components/ui/button"; // 导入 post 函数
 
 const emit = defineEmits(['upload-success', 'upload-error']);
-const props = defineProps<{
-  isLocalParse?: boolean;
-  isHTML: boolean;
-}>();
+const props = defineProps({
+  isLocalParse: {
+    type: Boolean,
+    default: false,
+  },
+  isHTML: {
+    type: Boolean,
+    default: false,
+  },
+});
+
 
 const isDragging = ref(false);
 const isUploading = ref(false); // 添加上传状态
