@@ -13,10 +13,10 @@ export default {
     try {
       const requestBody = await request.json();
 
-      const apiKey = requestBody.api_key || env.OPENAI_API_KEY || 'sk-nohwayoqctuijqcxmfhpmauuavpwskqxjnwmavxsdokqiqft';
-      const baseUrl = requestBody.base_url || env.OPENAI_BASE_URL || 'https://api.siliconflow.cn';
-      const model = requestBody.model || env.OPENAI_MODEL || 'Qwen/Qwen2.5-7B-Instruct';
-      const userPrompt = requestBody.prompt || env.DEFAULT_PROMPT || 'You are a text paraphrasing assistant. Your task is to rewrite the text while maintaining the same meaning but using different expressions. Maintain professionalism and fluency while ensuring accuracy.';
+      const apiKey = requestBody.api_key || 'sk-xxxxx';
+      const baseUrl = requestBody.base_url || 'https://api.siliconflow.cn';
+      const model = requestBody.model || 'Qwen/Qwen2.5-7B-Instruct';
+      const userPrompt = requestBody.prompt || 'You are a text paraphrasing assistant. Your task is to rewrite the text while maintaining the same meaning but using different expressions. Maintain professionalism and fluency while ensuring accuracy.';
       const userContent = requestBody.content;
 
       if (!userContent) {
