@@ -280,7 +280,7 @@ const handleAIParaphrase = async (row: AnalyzeResult) => {
        response = await openAIAct(config.api_key,config.base_url,config.model,config.prompt,row.original_text);
     }else{
       response = await post('/ai_paraphrase', { // 使用 post 函数
-        text: row.original_text,
+        content: row.original_text,
         ...config, // 将配置合并到请求中
       });
     }

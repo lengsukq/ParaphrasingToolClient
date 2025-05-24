@@ -207,7 +207,7 @@ const handleAIParaphrase = async (row: AnalyzeResult) => {
       response = await openAIAct(config.api_key, config.base_url, config.model, config.prompt, row.text);
     } else {
       response = await post('/ai_paraphrase', {
-        text: row.text,
+        content: row.text,
         ...config,
       });
     }

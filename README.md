@@ -37,17 +37,15 @@
 
 ### 文件解析方式变更
 
-论文查重模块的文件解析功能现在完全在用户的前端（浏览器）本地进行处理。这意味着您的文档数据不会上传到任何服务器进行解析，增强了数据隐私和安全性。
+论文查重模块的文件解析功能现在完全在用户的前端（浏览器）本地进行处理，实现毫秒级解析。这意味着您的文档数据不会上传到任何服务器进行解析，增强了数据隐私和安全性。
 
 ### AI 降重功能说明
 
-AI 降重功能通过一个 Cloudflare Worker 代理进行请求。这意味着：
+Cloudflare Worker 服务现在仅作为调用大模型服务的中转。当启用本地 AI 降重后，将由前端直接调用大模型，不过可能会遇到跨域问题，请提前做好相关配置。
 
-- **数据流向**：当您使用 AI 降重功能时，您的文本内容会发送到我们部署的 Cloudflare Worker。该 Worker 随后会根据配置（您在应用内设置的 API Key、Base URL、Model 等，或 Worker 中配置的默认值）向相应的 AI 服务提供商（例如 SiliconFlow 或其他 OpenAI 兼容的 API）发起请求。
-- **本地 AI 降重选项**：即使您在应用界面中勾选了“本地 AI 降重”或类似的选项，请求**仍然会通过 Cloudflare Worker**。此时，Worker 会使用您在应用中配置的本地参数（如果提供）或其内置的默认参数来请求 AI 服务。这确保了请求的统一处理和跨域问题的解决。
-- **配置灵活性**：您可以在应用中配置自己的 OpenAI API Key、Base URL 和模型。如果未提供这些配置，系统将使用 Cloudflare Worker 中预设的默认值进行请求。
+Python 后端代码已不再更新，项目主要依赖 Cloudflare Worker 进行 AI 服务的请求处理。
 
-**Cloudflare Worker 默认配置（仅在前端未提供相应配置时使用）：**
+#### Cloudflare Worker 默认配置（仅在前端未提供相应配置时使用）：
 
 -   `OPENAI_API_KEY`: `sk-xxxxxxxxxxx`
 -   `OPENAI_MODEL`: `Qwen/Qwen2.5-7B-Instruct`
@@ -57,8 +55,8 @@ AI 降重功能通过一个 Cloudflare Worker 代理进行请求。这意味着�
 ## 技术细节 
 
 *   **前端:** Vue 3, TypeScript 
-*   **后端:** Python (开源地址: `https://github.com/lengsukq/ParaphrasingToolServer` ) 
-*   **后端说明:** 后端因为是个人维护的，随时可能失效。 
+*   **后端:** Python (开源地址: `https://github.com/lengsukq/ParaphrasingToolServer` ) ，已弃用不再更新，改用 Cloudflare Worker。
+*   **后端说明:** 原 Python 后端因为是个人维护的，随时可能失效，现已不再维护。 
 *   **默认模型:**  如果未在系统配置中配置大模型参数，后端将默认使用 Qwen-7B 模型进行文本处理。 
 
 ## 使用说明 
@@ -68,17 +66,17 @@ AI 降重功能通过一个 Cloudflare Worker 代理进行请求。这意味着�
 1.  点击界面右上角的「系统配置」按钮 
 2.  在弹出的配置对话框中设置以下内容： 
      -   **API Key**：输入您的OpenAI API密钥 
-     -   **Base URL**：输入API的基础URL（可使用官方URL或自定义代理） 
+     -   **Base URL**：输入API的基础URL。如果未勾选「本地AI降重」，请填写完整的 `/v1/chat/completions` 路径，例如 `https://api.siliconflow.cn/v1/chat/completions`。（可使用官方URL或自定义代理） 
      -   **Model**：选择您想使用的AI模型（如gpt-3.5-turbo、gpt-4等） 
      -   **Prompt**：自定义降重提示词，指导AI如何改写文本 
-     -   **本地AI降重**：勾选是否使用本地AI进行降重 
+     -   **本地AI降重**：勾选是否使用本地AI进行降重，启用后可能会遇到跨域问题，请提前做好相关配置。
 3.  点击「保存」按钮应用设置 
 
 ### 2. 上传查重报告 
 
 1.  在主界面选择「论文降重」或「AIGC检测」功能标签 
 2.  将查重报告文件（HTML格式）拖拽到上传区域，或点击「点击上传」按钮选择文件 
-3.  系统会自动解析报告内容并在表格中显示结果 
+3.  系统会自动在前端进行毫秒级解析报告内容并在表格中显示结果 
 
 ### 3. 使用AI降重 
 
@@ -95,6 +93,8 @@ AI 降重功能通过一个 Cloudflare Worker 代理进行请求。这意味着�
 3.  AI降重效果受到所选模型和自定义prompt的影响，可以通过调整prompt来优化降重效果 
 4.  使用OpenAI API需要确保网络环境能够正常访问API服务器 
 5.  请确保您已在项目根目录下的 `.env.local` 文件中正确配置了 `VITE_API_BASE_URL` 环境变量，使其指向您部署的 Cloudflare Worker 或其他 AI 服务代理的实际 URL。
+6.  启用本地 AI 降重时，可能会遇到跨域问题，请提前做好相关配置。
+7.  若未勾选「本地AI降重」，请确保 `Base URL` 填写完整，包含 `/v1/chat/completions` 路径。
 
 ## 技术支持 
 
@@ -104,7 +104,7 @@ AI 降重功能通过一个 Cloudflare Worker 代理进行请求。这意味着�
 2.  检查网络连接是否正常 
 3.  确认上传的报告格式是否正确 
 4.  尝试调整prompt或更换模型 
-5.  查看错误日志以获取更多信息（可能存在跨域问题） 
+5.  查看错误日志以获取更多信息（可能存在跨域问题，特别是启用本地 AI 降重时） 
 
 --- 
 
