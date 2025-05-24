@@ -182,38 +182,72 @@ export async function upload(url, formData, options = {}) {
   });
 }
 
-// 新增 OpenAI 请求函数
-// Please install OpenAI SDK first: `npm install openai`
+// 新增 OpenAI 请求函数 (通过 Cloudflare Worker 代理)
 
-import OpenAI from "openai";
+export async function openAIAct(api_key, base_url, model, prompt, content) {
+  // 注意：请将 YOUR_CLOUDFLARE_WORKER_URL 替换为您部署的 Cloudflare Worker 的实际 URL
+  // 例如: https://your-worker-name.your-subdomain.workers.dev
+  // 您可以在 Cloudflare Dashboard 中找到您的 Worker URL
+  // 或者，如果您使用 wrangler cli 部署，它会在部署成功后显示 URL
+  const workerUrl = import.meta.env.VITE_API_BASE_URL;
 
-
-
-export async function openAIAct(api_key,base_url,model, prompt,content) {
-  // 四个参数必须都有值
-  if (!api_key || !base_url || !model || !prompt) {
-    return {message:'请填写完整openAI配置，或取消本地AI降重',code:500};
+  if (!workerUrl) {
+    console.error('VITE_API_BASE_URL 环境变量未配置。请在 .env 文件中配置 VITE_API_BASE_URL 指向您的 AI 服务代理 URL。');
+    // 对于用户界面，返回一个更友好的提示
+    return { code: 500, message: 'AI服务代理URL未配置，请检查环境变量设置或联系管理员。' };
   }
-  const openai = new OpenAI({
-    baseURL: base_url,
-    apiKey: api_key,
-    dangerouslyAllowBrowser: true,
-  });
-  const completion = await openai.chat.completions.create({
-    messages: [{role: "system", content: prompt},{ role: "user", content: content }],
-    model: model,
-  });
+
+  // content 是必需的
+  if (!content) {
+    return { code: 400, message: '请求内容不能为空。' };
+  }
+
+  const requestBody = {
+    api_key: api_key,     // 可选，Worker 有默认值
+    base_url: base_url,   // 可选，Worker 有默认值
+    model: model,         // 可选，Worker 有默认值
+    prompt: prompt,       // 可选，Worker 有默认值
+    content: content      // 必需
+  };
 
   try {
-    console.log('completion->',completion,completion.choices[0].message.content);
+    const response = await fetch(workerUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
 
-    return {
-      code:200,
-      content: completion.choices[0].message.content,
-    };
-  }catch(err) {
-    console.log(err);
-    return {code:500,message:'openAI请求失败，请检查配置'};
+    const responseData = await response.json(); // 总是尝试解析JSON
+
+    if (!response.ok) {
+      console.error('Cloudflare Worker 请求失败:', response.status, responseData);
+      // 优先使用 Worker 返回的错误信息
+      const message = responseData?.error?.message || responseData?.message || `AI服务请求失败，状态码: ${response.status}`;
+      return { code: response.status, message };
+    }
+
+    // 兼容直接返回 content 的情况，以及 OpenAI SDK 风格的返回
+    if (responseData.content) {
+        return {
+            code: 200,
+            content: responseData.content,
+        };
+    } else if (responseData.choices && responseData.choices[0] && responseData.choices[0].message && responseData.choices[0].message.content) {
+        return {
+            code: 200,
+            content: responseData.choices[0].message.content,
+        };
+    } else {
+        console.error('Cloudflare Worker 返回数据格式不符合预期:', responseData);
+        return { code: 500, message: 'AI服务返回数据格式不符合预期。' };
+    }
+
+  } catch (err) {
+    console.error('调用 Cloudflare Worker 时发生网络错误:', err);
+    // 对于网络错误等，提供通用提示
+    return { code: 500, message: '调用AI服务失败，请检查网络连接或联系管理员。' };
   }
 }
 
