@@ -21,6 +21,7 @@
       <div class="mb-6">
         <CustomUpload
             :isHTML="isHTML"
+            :isLocalParse="true"
             @upload-success="handleUploadSuccess"
             @upload-error="handleUploadError"
         />
@@ -125,7 +126,9 @@ interface AnalyzeResult {
   similar_source: string;
   correction_advice: string;
   isLoading?: boolean;
-  aiResult?: { paraphrased_text: string }; //  修改aiResult的类型
+  aiResult?: { paraphrased_text: string };
+  original_html?: string; 
+  similar_source_html?: string;
 }
 
 interface Config {
@@ -169,15 +172,97 @@ const handleConfigChange = (newConfig: Config) => {
   localStorage.setItem('ai_config', JSON.stringify(newConfig));
 };
 
-const handleUploadSuccess = (response: any) => {
-  if (response.code === 200) {
-    analyzeResults.value = response.data.map((item: AnalyzeResult) => ({
-      ...item,
-      isLoading: false,
-      aiResult: { paraphrased_text: '' } // 初始化 aiResult.paraphrased_text
-    }));
-    toast.success('文件上传成功')
-  }
+const handleUploadSuccess = (file: File) => {
+  const reader = new FileReader();
+  reader.onload = (event: ProgressEvent<FileReader>) => {
+    const htmlContent = event.target?.result as string;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
+    const results: AnalyzeResult[] = [];
+
+    if (htmlContent.includes("检测报告由大雅相似度分析检测系统生成")) {
+      doc.querySelectorAll('div.piece').forEach(pieceDiv => {
+        const pieceId = pieceDiv.getAttribute('id');
+        if (!pieceId) return;
+
+        let original_text = "";
+        let original_html = "";
+        const redFont = pieceDiv.querySelector('font[color="red"]');
+        if (redFont) {
+          original_text = pieceDiv.textContent?.trim() || "";
+          if (isHTML.value) {
+            original_html = pieceDiv.outerHTML;
+          }
+        }
+
+        let similar_source = "";
+        let similar_source_html = "";
+        const rightDivId = `right_${pieceId}`;
+        const rightDiv = doc.querySelector(`div#${rightDivId}.right_list`);
+        if (rightDiv) {
+          if (isHTML.value) {
+            similar_source_html = rightDiv.outerHTML;
+          } else {
+            const similarParagraphs: string[] = [];
+            rightDiv.querySelectorAll('div.similar_paragraph').forEach(p => {
+              similarParagraphs.push(p.textContent?.trim() || "");
+            });
+            similar_source = similarParagraphs.join('\n');
+          }
+        }
+        const result: AnalyzeResult = {
+          original_text,
+          similar_source,
+          correction_advice: "", // 新逻辑中没有修改建议
+          isLoading: false,
+          aiResult: { paraphrased_text: '' }
+        };
+        if (isHTML.value) {
+          result.original_html = original_html;
+          result.similar_source_html = similar_source_html;
+        }
+        results.push(result);
+      });
+    } else {
+      doc.querySelectorAll('tr').forEach(tr => {
+        const originTextDiv = tr.querySelector('td.Origin_text p');
+        const original_text = originTextDiv?.textContent?.trim() || "";
+
+        const similarSourceDiv = tr.querySelector('div.siminfo');
+        let similar_source = "";
+        if (similarSourceDiv) {
+          const paragraphs: string[] = [];
+          similarSourceDiv.querySelectorAll('p').forEach(p => {
+            const text = p.textContent?.trim();
+            if (text) paragraphs.push(text);
+          });
+          similar_source = paragraphs.join('\n');
+        }
+
+        const correctionAdviceDiv = tr.querySelector('div.correct_advice');
+        let correction_advice = "";
+        if (correctionAdviceDiv) {
+          const spans: string[] = [];
+          correctionAdviceDiv.querySelectorAll('span').forEach(span => {
+            spans.push(span.textContent?.trim() || "");
+          });
+          correction_advice = spans.join('\n');
+        }
+        if (original_text) { // Only add if original_text is not empty
+            results.push({
+                original_text,
+                similar_source,
+                correction_advice,
+                isLoading: false,
+                aiResult: { paraphrased_text: '' }
+            });
+        }
+      });
+    }
+    analyzeResults.value = results;
+    toast.success('文件解析成功');
+  };
+  reader.readAsText(file);
 };
 
 const handleUploadError = (error: string) => {
