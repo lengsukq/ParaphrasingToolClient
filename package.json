@@ -14,6 +14,8 @@
     "@vueuse/core": "^13.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
     "lucide-vue-next": "^0.487.0",
     "openai": "^4.92.1",
     "reka-ui": "^2.2.0",
@@ -25,6 +27,7 @@
     "vue-sonner": "^1.3.0"
   },
   "devDependencies": {
+    "@types/file-saver": "^2.0.7",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/tsconfig": "^0.7.0",

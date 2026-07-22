@@ -14,6 +14,11 @@ const router = createRouter({
       path: '/ai-detection',
       name: 'ai-detection',
       component: AIDetectionPage
+    },
+    {
+      path: '/ai-smart-parse',
+      name: 'ai-smart-parse',
+      component: () => import('@/components/AISmartParsePage.vue')
     }
   ]
 });

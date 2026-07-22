@@ -16,6 +16,7 @@ const navigateTo = (path: string) => {
     <div class="flex gap-4 mb-6">
       <Button variant="outline" :class="{ 'active': $route.path === '/' }" @click="navigateTo('/')">论文降重</Button>
       <Button variant="outline" :class="{ 'active': $route.path === '/ai-detection' }" @click="navigateTo('/ai-detection')">AIGC检测</Button>
+      <Button variant="outline" :class="{ 'active': $route.path === '/ai-smart-parse' }" @click="navigateTo('/ai-smart-parse')">AI智能解析</Button>
 
     </div>
     <router-view />
