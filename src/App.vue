@@ -2,43 +2,88 @@
 import { Toaster } from '@/components/ui/sonner'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'vue-router'
+import { provideConfig } from '@/composables/useConfig'
+import ConfigDialog from '@/components/ConfigDialog.vue'
 
 const router = useRouter()
+
+// 全局提供配置
+const { config, isConfigDialogOpen, openConfigDialog, closeConfigDialog, handleConfigChange } = provideConfig()
 
 const navigateTo = (path: string) => {
   router.push(path)
 }
+
+const navItems = [
+  { path: '/', label: '论文降重' },
+  { path: '/ai-detection', label: 'AIGC检测' },
+  { path: '/ai-smart-parse', label: 'AI智能解析' },
+]
 </script>
 
 <template>
-  <div class="container mx-auto p-4">
+  <div class="min-h-screen bg-background">
     <Toaster />
-    <div class="flex gap-4 mb-6">
-      <Button variant="outline" :class="{ 'active': $route.path === '/' }" @click="navigateTo('/')">论文降重</Button>
-      <Button variant="outline" :class="{ 'active': $route.path === '/ai-detection' }" @click="navigateTo('/ai-detection')">AIGC检测</Button>
-      <Button variant="outline" :class="{ 'active': $route.path === '/ai-smart-parse' }" @click="navigateTo('/ai-smart-parse')">AI智能解析</Button>
 
-    </div>
-    <router-view />
+    <!-- 顶部导航栏 -->
+    <header class="border-b sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+        <!-- 左侧品牌 -->
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="text-base font-bold tracking-tight">PaperRewrite</span>
+        </div>
+
+        <!-- 中间导航 -->
+        <nav class="flex items-center gap-1">
+          <Button
+            v-for="item in navItems"
+            :key="item.path"
+            variant="ghost"
+            size="sm"
+            class="relative"
+            :class="{ 'nav-active': $route.path === item.path }"
+            @click="navigateTo(item.path)"
+          >
+            {{ item.label }}
+          </Button>
+        </nav>
+
+        <!-- 右侧操作 -->
+        <div class="shrink-0">
+          <Button variant="outline" size="sm" @click="openConfigDialog">系统配置</Button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 内容区 -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+      <router-view />
+    </main>
+
+    <!-- 全局配置对话框 -->
+    <ConfigDialog
+      :open="isConfigDialogOpen"
+      @close="closeConfigDialog"
+      @config-change="handleConfigChange"
+      :config="config"
+    />
   </div>
 </template>
 
 <style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+.nav-active {
+  background-color: var(--accent);
+  font-weight: 600;
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
-.active {
-  background-color: #2563eb; /* 更鲜艳的背景色 */
-  color: white; /* 白色文字 */
-  border-color: #2563eb; /* 保持边框颜色一致 */
+.nav-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 2px;
+  background-color: var(--primary);
+  border-radius: 1px;
 }
 </style>

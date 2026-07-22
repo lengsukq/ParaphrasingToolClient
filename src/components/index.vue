@@ -2,22 +2,7 @@
   <!--  整体容器 -->
   <div class="w-full">
     <div class="">
-      <!-- 顶部操作栏 -->
-      <div class="flex justify-end mb-6" >
-<!--        <div class="flex items-center space-x-2">-->
-<!--          <Checkbox id="localAi" v-model="isHTML" class="col-span-3" />-->
-<!--          <Label for="airplane-mode">保留原文</Label>-->
-<!--        </div>-->
-        <Button variant="outline" @click="openConfigDialog">系统配置</Button>
-        <ConfigDialog
-            :open="isConfigDialogOpen"
-            @close="closeConfigDialog"
-            @config-change="handleConfigChange"
-            :config="config"
-        />
-      </div>
-
-      <!--  上传区域 -->
+      <!-- 上传区域 -->
       <div class="mb-6">
         <CustomUpload
             :isHTML="isHTML"
@@ -99,28 +84,26 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { toast } from 'vue-sonner'
 import CustomUpload from '@/components/CustomUpload.vue';
-import { post,openAIAct } from '@/lib/request';
+import { useConfig } from '@/composables/useConfig';
+import { useParaphrase } from '@/composables/useParaphrase';
 import {
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"  // 假设这些组件仍然可用
+} from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Textarea } from '@/components/ui/textarea'; // 导入 Textarea 组件
-import ConfigDialog from './ConfigDialog.vue'; // 导入ConfigDialog组件
-import AIParaphraseDialog from './AIParaphraseDialog.vue'; // 导入新组件
+import { Textarea } from '@/components/ui/textarea';
+import AIParaphraseDialog from './AIParaphraseDialog.vue';
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
-// import { Label } from '@/components/ui/label'
-// import {Checkbox} from "@/components/ui/checkbox";
 interface AnalyzeResult {
   original_text: string;
   similar_source: string;
@@ -131,46 +114,16 @@ interface AnalyzeResult {
   similar_source_html?: string;
 }
 
-interface Config {
-  api_key?: string;
-  base_url?: string;
-  model?: string;
-  prompt?: string;
-  localAi?: boolean;
-}
+const { config } = useConfig();
+const { paraphrase } = useParaphrase(config);
 const isHTML = ref<boolean>(false)
 
 const analyzeResults = ref<AnalyzeResult[]>([]);
-const isConfigDialogOpen = ref(false);
-const config = reactive<Config>({});
 
 // AI降重对话框相关状态
 const isParaphraseDialogOpen = ref(false);
 const dialogOriginalText = ref('');
 const dialogParaphrasedText = ref('');
-
-// 在页面加载时读取配置信息
-onMounted(() => {
-  const savedConfig = localStorage.getItem('ai_config');
-  if (savedConfig) {
-    Object.assign(config, JSON.parse(savedConfig));
-  }
-});
-
-
-const openConfigDialog = () => {
-  isConfigDialogOpen.value = true;
-};
-
-const closeConfigDialog = () => {
-  isConfigDialogOpen.value = false;
-};
-
-const handleConfigChange = (newConfig: Config) => {
-  Object.assign(config, newConfig);
-  // 保存配置信息到 localStorage
-  localStorage.setItem('ai_config', JSON.stringify(newConfig));
-};
 
 const handleUploadSuccess = (file: File) => {
   const reader = new FileReader();
@@ -274,26 +227,12 @@ const handleAIParaphrase = async (row: AnalyzeResult) => {
   if (index === -1) return;
 
   analyzeResults.value[index].isLoading = true;
-  let response;
   try {
-    if (config.localAi){
-       response = await openAIAct(config.api_key,config.base_url,config.model,config.prompt,row.original_text);
-    }else{
-      response = await post('/ai_paraphrase', { // 使用 post 函数
-        content: row.original_text,
-        ...config, // 将配置合并到请求中
-      });
-    }
-
-
-    if (response.code === 200) {
-      analyzeResults.value[index].aiResult = { paraphrased_text: response.content || response.data.paraphrased_text }; // 确保正确赋值
-      toast.success('AI降重成功')
-    } else {
-      throw new Error(response.message || 'AI处理失败');
-    }
+    const result = await paraphrase(row.original_text);
+    analyzeResults.value[index].aiResult = { paraphrased_text: result };
+    toast.success('AI降重成功');
   } catch (error: any) {
-    toast.error(error.message || 'AI处理失败')
+    toast.error(error.message || 'AI处理失败');
   } finally {
     analyzeResults.value[index].isLoading = false;
   }
