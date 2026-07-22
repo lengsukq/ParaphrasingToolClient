@@ -1,90 +1,99 @@
 <template>
-  <!--  整体容器 -->
-  <div class="w-full">
-    <div class="">
-      <!-- 上传区域 -->
-      <div class="mb-6">
-        <CustomUpload
-            :isHTML="isHTML"
-            :isLocalParse="true"
-            @upload-success="handleUploadSuccess"
-            @upload-error="handleUploadError"
-        />
+  <div class="w-full space-y-6">
+    <!-- 上传区域 -->
+    <CustomUpload
+        :isHTML="isHTML"
+        :isLocalParse="true"
+        @upload-success="handleUploadSuccess"
+        @upload-error="handleUploadError"
+    />
+
+    <!-- 空状态引导 -->
+    <div v-if="analyzeResults.length === 0" class="text-center py-12 text-muted-foreground">
+      <p class="text-sm">上传 HTML 查重报告后，系统将自动解析并展示结果</p>
+      <p class="text-xs mt-2">支持大雅、PaperYY 等查重系统的 HTML 报告</p>
+      <!-- 推荐 AI 智能解析 -->
+      <div class="mt-6 inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-left">
+        <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <div>
+          <p class="text-sm font-medium text-blue-800">报告格式不支持？试试 AI 智能解析</p>
+          <p class="text-xs text-blue-600 mt-0.5">AI 自动生成解析规则，兼容任意来源的查重报告</p>
+        </div>
+        <button class="ml-2 text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline shrink-0" @click="goToSmartParse">去使用 →</button>
+      </div>
+    </div>
+
+    <!-- 结果区域 -->
+    <div v-if="analyzeResults.length > 0" class="space-y-4">
+      <!-- 统计栏 -->
+      <div class="flex items-center justify-between">
+        <p class="text-sm text-muted-foreground">
+          共 {{ analyzeResults.length }} 条结果，已降重 {{ paraphrasedCount }} 条
+        </p>
+        <Button size="sm" @click="handleBatchParaphrase" :loading="isBatchLoading">
+          全部降重
+        </Button>
       </div>
 
-      <!--  表格区域 -->
-      <div v-if="analyzeResults.length > 0" class="">
-        <TableHeader>
-          <TableRow>
-            <TableHead style="width: 35%;">原文</TableHead>
-            <TableHead style="width: 35%;">相似源</TableHead>
-            <TableHead style="width: 20%;">修改建议</TableHead>
-            <TableHead style="width: 10%;">AI降重</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow v-for="row in analyzeResults" :key="row.original_text">
-            <TableCell>
-                <Textarea
-                    style="width: 100%; word-break: break-word; max-height: 10em; overflow: auto;"
-                    :title="row.original_text"
-                    v-model="row.original_text"
-                    readonly
-                />
-            </TableCell>
-            <TableCell>
-                <Textarea
-                    style="width: 100%; word-break: break-word; max-height: 10em; overflow: auto;"
-                    :title="row.similar_source"
-                    v-model="row.similar_source"
-                    readonly
-                />
-            </TableCell>
-            <TableCell>
-                <Textarea
-                    style="width: 100%; word-break: break-word; max-height: 10em; overflow: auto;"
-                    :title="row.correction_advice"
-                    v-model="row.correction_advice"
-                    readonly
-                />
-            </TableCell>
-            <TableCell>
+      <!-- 表格 -->
+      <TableHeader>
+        <TableRow>
+          <TableHead style="width: 35%;">原文</TableHead>
+          <TableHead style="width: 30%;">相似源</TableHead>
+          <TableHead style="width: 15%;">修改建议</TableHead>
+          <TableHead style="width: 20%;">AI降重</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <TableRow v-for="(row, idx) in analyzeResults" :key="idx">
+          <TableCell>
+            <CollapsibleText :text="row.original_text" />
+          </TableCell>
+          <TableCell>
+            <CollapsibleText :text="row.similar_source || '—'" />
+          </TableCell>
+          <TableCell>
+            <CollapsibleText :text="row.correction_advice || '—'" />
+          </TableCell>
+          <TableCell>
+            <div class="space-y-2">
               <Button
                   variant="outline"
+                  size="sm"
                   @click="handleAIParaphrase(row)"
                   :loading="row.isLoading"
               >
                 AI降重
               </Button>
-              <div v-if="row.aiResult && row.aiResult.paraphrased_text" class="mt-2 text-sm text-green-600">
-                  <!-- 按钮点击后，显示AIParaphraseDialog -->
-                <HoverCard>
-                  <HoverCardTrigger>
-                    <Button variant="outline" @click="openParaphraseDialog(row)">查看降重结果</Button>
-                  </HoverCardTrigger>
-                  <HoverCardContent>
-                    {{ row.aiResult.paraphrased_text }}
-                  </HoverCardContent>
-                </HoverCard>
+              <!-- 降重结果内联展示 -->
+              <div v-if="row.aiResult && row.aiResult.paraphrased_text" class="rounded-md border border-green-200 bg-green-50 p-2">
+                <p class="text-xs text-green-700 whitespace-pre-wrap break-words line-clamp-4">{{ row.aiResult.paraphrased_text }}</p>
+                <div class="flex gap-2 mt-1">
+                  <button class="text-xs text-green-600 hover:underline" @click="copyText(row.aiResult!.paraphrased_text)">复制</button>
+                  <button class="text-xs text-muted-foreground hover:underline" @click="openParaphraseDialog(row)">查看全文</button>
+                </div>
               </div>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </div>
-
-      <!-- AI降重结果对话框 -->
-      <AIParaphraseDialog
-        :open="isParaphraseDialogOpen"
-        :originalText="dialogOriginalText"
-        :paraphrasedText="dialogParaphrasedText"
-        @close="closeParaphraseDialog"
-      />
+            </div>
+          </TableCell>
+        </TableRow>
+      </TableBody>
     </div>
+
+    <!-- AI降重结果对话框 -->
+    <AIParaphraseDialog
+      :open="isParaphraseDialogOpen"
+      :originalText="dialogOriginalText"
+      :paraphrasedText="dialogParaphrasedText"
+      @close="closeParaphraseDialog"
+    />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { toast } from 'vue-sonner'
 import CustomUpload from '@/components/CustomUpload.vue';
 import { useConfig } from '@/composables/useConfig';
@@ -97,13 +106,12 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Textarea } from '@/components/ui/textarea';
+import { CollapsibleText } from '@/components/ui/collapsible-text';
 import AIParaphraseDialog from './AIParaphraseDialog.vue';
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from '@/components/ui/hover-card'
+
+const router = useRouter();
+const goToSmartParse = () => router.push('/ai-smart-parse');
+
 interface AnalyzeResult {
   original_text: string;
   similar_source: string;
@@ -119,6 +127,11 @@ const { paraphrase } = useParaphrase(config);
 const isHTML = ref<boolean>(false)
 
 const analyzeResults = ref<AnalyzeResult[]>([]);
+const isBatchLoading = ref(false);
+
+const paraphrasedCount = computed(() =>
+  analyzeResults.value.filter(r => r.aiResult?.paraphrased_text).length
+);
 
 // AI降重对话框相关状态
 const isParaphraseDialogOpen = ref(false);
@@ -236,6 +249,31 @@ const handleAIParaphrase = async (row: AnalyzeResult) => {
   } finally {
     analyzeResults.value[index].isLoading = false;
   }
+};
+
+const handleBatchParaphrase = async () => {
+  isBatchLoading.value = true;
+  let success = 0;
+  for (let i = 0; i < analyzeResults.value.length; i++) {
+    if (analyzeResults.value[i].aiResult?.paraphrased_text) continue;
+    analyzeResults.value[i].isLoading = true;
+    try {
+      const result = await paraphrase(analyzeResults.value[i].original_text);
+      analyzeResults.value[i].aiResult = { paraphrased_text: result };
+      success++;
+    } catch { /* skip */ }
+    finally { analyzeResults.value[i].isLoading = false; }
+  }
+  isBatchLoading.value = false;
+  toast.success(`批量降重完成，成功 ${success} 条`);
+};
+
+const copyText = (text: string) => {
+  navigator.clipboard.writeText(text).then(() => {
+    toast.success('已复制到剪贴板');
+  }).catch(() => {
+    toast.error('复制失败');
+  });
 };
 
 // 打开AI降重结果对话框

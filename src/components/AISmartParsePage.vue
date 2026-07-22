@@ -3,15 +3,6 @@
     <!-- 顶部操作栏 -->
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-lg font-semibold">AI 智能解析</h2>
-      <div class="flex gap-2">
-        <Button variant="outline" @click="openConfigDialog">系统配置</Button>
-        <ConfigDialog
-          :open="isConfigDialogOpen"
-          @close="closeConfigDialog"
-          @config-change="handleConfigChange"
-          :config="config"
-        />
-      </div>
     </div>
 
     <div class="flex gap-6">
@@ -19,34 +10,7 @@
       <div class="flex-1 min-w-0">
         <!-- 上传区域 -->
         <div class="mb-6">
-          <div
-            class="w-full border-2 border-dashed border-gray-300 rounded-lg transition-all duration-300"
-            :class="{ 'border-blue-500 bg-blue-50': isDragging, 'hover:border-blue-400': !isDragging }"
-            @dragenter.prevent="isDragging = true"
-            @dragleave.prevent="isDragging = false"
-            @dragover.prevent
-            @drop.prevent="handleDrop"
-          >
-            <div class="p-8 text-center">
-              <div class="flex flex-col items-center justify-center space-y-4">
-                <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center"
-                  :class="{ 'animate-bounce': isDragging }">
-                  <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                </div>
-                <div class="space-y-2">
-                  <h3 class="text-lg font-medium text-gray-900">
-                    拖拽文件到此处或
-                    <Button variant="outline" @click="triggerFileInput">点击上传</Button>
-                  </h3>
-                  <p class="text-sm text-gray-500">支持上传 HTML 查重报告文件</p>
-                </div>
-              </div>
-            </div>
-            <input ref="fileInput" type="file" accept=".html" class="hidden" @change="handleFileSelect" />
-          </div>
+          <CustomUpload :isLocalParse="true" @upload-success="handleUploadSuccess" />
         </div>
 
         <!-- 片段预览区域 -->
@@ -105,26 +69,24 @@
           <TableBody>
             <TableRow v-for="(row, idx) in analyzeResults" :key="idx">
               <TableCell>
-                <Textarea style="width: 100%; word-break: break-word; max-height: 10em; overflow: auto;"
-                  :title="row.original_text" v-model="row.original_text" readonly />
+                <CollapsibleText :text="row.original_text" />
               </TableCell>
               <TableCell>
-                <Textarea style="width: 100%; word-break: break-word; max-height: 10em; overflow: auto;"
-                  :title="row.similar_source" v-model="row.similar_source" readonly />
+                <CollapsibleText :text="row.similar_source || '—'" />
               </TableCell>
               <TableCell>
-                <Textarea style="width: 100%; word-break: break-word; max-height: 10em; overflow: auto;"
-                  :title="row.correction_advice" v-model="row.correction_advice" readonly />
+                <CollapsibleText :text="row.correction_advice || '—'" />
               </TableCell>
               <TableCell>
-                <Button variant="outline" @click="handleAIParaphrase(row)" :loading="row.isLoading">AI降重</Button>
-                <div v-if="row.aiResult && row.aiResult.paraphrased_text" class="mt-2">
-                  <HoverCard>
-                    <HoverCardTrigger>
-                      <Button variant="outline" @click="openParaphraseDialog(row)">查看结果</Button>
-                    </HoverCardTrigger>
-                    <HoverCardContent>{{ row.aiResult.paraphrased_text }}</HoverCardContent>
-                  </HoverCard>
+                <div class="space-y-2">
+                  <Button variant="outline" size="sm" @click="handleAIParaphrase(row)" :loading="row.isLoading">AI降重</Button>
+                  <div v-if="row.aiResult && row.aiResult.paraphrased_text" class="rounded-md border border-green-200 bg-green-50 p-2">
+                    <p class="text-xs text-green-700 whitespace-pre-wrap break-words line-clamp-4">{{ row.aiResult.paraphrased_text }}</p>
+                    <div class="flex gap-2 mt-1">
+                      <button class="text-xs text-green-600 hover:underline" @click="copyText(row.aiResult!.paraphrased_text)">复制</button>
+                      <button class="text-xs text-muted-foreground hover:underline" @click="openParaphraseDialog(row)">查看全文</button>
+                    </div>
+                  </div>
                 </div>
               </TableCell>
             </TableRow>
@@ -187,7 +149,9 @@
 <script lang="ts" setup>
 import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import { toast } from 'vue-sonner';
-import { openAIAct, post } from '@/lib/request';
+import { openAIAct } from '@/lib/request';
+import { useConfig } from '@/composables/useConfig';
+import { useParaphrase } from '@/composables/useParaphrase';
 import {
   extractSnippet,
   executeRule,
@@ -209,39 +173,19 @@ import {
 } from '@/lib/rule-store';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
-import ConfigDialog from './ConfigDialog.vue';
+import { CollapsibleText } from '@/components/ui/collapsible-text';
+import CustomUpload from '@/components/CustomUpload.vue';
 import AIParaphraseDialog from './AIParaphraseDialog.vue';
 
 // ==================== 配置相关 ====================
-interface Config {
-  api_key?: string;
-  base_url?: string;
-  model?: string;
-  prompt?: string;
-  localAi?: boolean;
-}
-
-const config = reactive<Config>({});
-const isConfigDialogOpen = ref(false);
+const { config } = useConfig();
+const { paraphrase } = useParaphrase(config);
 
 onMounted(() => {
-  const savedConfig = localStorage.getItem('ai_config');
-  if (savedConfig) Object.assign(config, JSON.parse(savedConfig));
   savedRules.value = getRules().map((r) => ({ ...r, _selected: false }));
 });
 
-const openConfigDialog = () => { isConfigDialogOpen.value = true; };
-const closeConfigDialog = () => { isConfigDialogOpen.value = false; };
-const handleConfigChange = (newConfig: Config) => {
-  Object.assign(config, newConfig);
-  localStorage.setItem('ai_config', JSON.stringify(newConfig));
-};
-
 // ==================== 文件上传 ====================
-const fileInput = ref<HTMLInputElement | null>(null);
-const isDragging = ref(false);
 const fullHtml = ref('');
 const snippets = reactive<SnippetParts>({ head: '', middle: '', tail: '' });
 const showSnippet = ref(false);
@@ -252,17 +196,8 @@ const snippetSummary = computed(() => {
   return `头 ${snippets.head.length} + 中 ${snippets.middle.length} + 尾 ${snippets.tail.length} 字符`;
 });
 
-const triggerFileInput = () => fileInput.value?.click();
-
-const handleDrop = (e: DragEvent) => {
-  isDragging.value = false;
-  const file = e.dataTransfer?.files[0];
-  if (file) processFile(file);
-};
-
-const handleFileSelect = (e: Event) => {
-  const file = (e.target as HTMLInputElement).files?.[0];
-  if (file) processFile(file);
+const handleUploadSuccess = (file: File) => {
+  processFile(file);
 };
 
 const processFile = (file: File) => {
@@ -471,35 +406,22 @@ const handleAIParaphrase = async (row: AnalyzeResult) => {
 
   analyzeResults.value[index].isLoading = true;
   try {
-    let response;
-    if (config.localAi) {
-      response = await openAIAct(
-        config.api_key,
-        config.base_url,
-        config.model,
-        config.prompt,
-        row.original_text
-      );
-    } else {
-      response = await post('/ai_paraphrase', {
-        content: row.original_text,
-        ...config,
-      });
-    }
-
-    if (response.code === 200) {
-      analyzeResults.value[index].aiResult = {
-        paraphrased_text: response.content || response.data?.paraphrased_text || '',
-      };
-      toast.success('AI降重成功');
-    } else {
-      throw new Error(response.message || 'AI处理失败');
-    }
+    const result = await paraphrase(row.original_text);
+    analyzeResults.value[index].aiResult = { paraphrased_text: result };
+    toast.success('AI降重成功');
   } catch (error: any) {
     toast.error(error.message || 'AI处理失败');
   } finally {
     analyzeResults.value[index].isLoading = false;
   }
+};
+
+const copyText = (text: string) => {
+  navigator.clipboard.writeText(text).then(() => {
+    toast.success('已复制到剪贴板');
+  }).catch(() => {
+    toast.error('复制失败');
+  });
 };
 
 const openParaphraseDialog = (row: AnalyzeResult) => {

@@ -15,9 +15,9 @@ const navigateTo = (path: string) => {
 }
 
 const navItems = [
-  { path: '/', label: '论文降重' },
-  { path: '/ai-detection', label: 'AIGC检测' },
-  { path: '/ai-smart-parse', label: 'AI智能解析' },
+  { path: '/', label: '论文降重', desc: '上传查重报告，自动提取重复段落，AI 一键改写降重' },
+  { path: '/ai-detection', label: 'AIGC检测', desc: '解析 AIGC 检测报告，定位 AI 生成高风险段落并降重' },
+  { path: '/ai-smart-parse', label: 'AI智能解析', desc: 'AI 自动生成解析规则，兼容任意格式的查重报告' },
 ]
 </script>
 
@@ -42,6 +42,7 @@ const navItems = [
             size="sm"
             class="relative"
             :class="{ 'nav-active': $route.path === item.path }"
+            :title="item.desc"
             @click="navigateTo(item.path)"
           >
             {{ item.label }}

@@ -25,3 +25,5 @@ package-lock.json
 *.sw?
 dist.zip
 yarn.lock
+.yarn/
+.yarnrc.yml
