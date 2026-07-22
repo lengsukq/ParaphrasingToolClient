@@ -8,7 +8,7 @@
 
     <!-- 空状态 -->
     <div v-if="analyzeResults.length === 0" class="text-center py-12 text-muted-foreground">
-      <p class="text-sm">上传 AIGC 检测报告后，系统将自动解析并展示结果</p>
+      <p class="text-sm">上传 PaperYY 的 AIGC 检测报告后，系统将自动解析并展示结果</p>
     </div>
 
     <!-- 表格区域 -->
